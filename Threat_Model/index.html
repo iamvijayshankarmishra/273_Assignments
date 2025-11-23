@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RAG Threat Model — Assignment Showcase</title>
+<style>
+  :root{
+    --bg:#0b1220; --panel:#101a2b; --ink:#e9eefc; --muted:#9fb2d6; --accent:#50c2ff;
+    --good:#28c76f; --warn:#ff9f43; --bad:#ea5455; --card:#0f1b2e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0b1220, #0d1626);
+       color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  header{padding:48px 20px 24px;border-bottom:1px solid rgba(255,255,255,.06);
+         background:radial-gradient(1200px 600px at 10% -20%,rgba(80,194,255,.15),transparent 60%)}
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{font-size:2rem;margin:0 0 10px} .subtitle{color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:18px 0}
+  .card{background:var(--panel);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:18px}
+  .card h3{margin:0 0 8px;font-size:1.05rem}
+  .hero{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+  .hero img{width:360px;max-width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#000}
+  .btn{display:inline-flex;gap:8px;align-items:center;background:#12233d;border:1px solid rgba(80,194,255,.35);
+       color:var(--ink);padding:10px 14px;border-radius:10px}
+  .btn:hover{background:#0f1e36}
+  .tag{display:inline-block;padding:4px 8px;border-radius:20px;font-size:.8rem;background:#12233d;border:1px solid rgba(255,255,255,.08);color:var(--muted)}
+  section{padding:24px 20px}
+  h2{margin:0 0 10px;font-size:1.35rem}
+  table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  th,td{text-align:left;padding:10px 12px;background:var(--card);border:1px solid rgba(255,255,255,.06)}
+  th{background:#102036}
+  tr td:first-child, tr th:first-child{border-top-left-radius:10px;border-bottom-left-radius:10px}
+  tr td:last-child, tr th:last-child{border-top-right-radius:10px;border-bottom-right-radius:10px}
+  footer{padding:30px 20px;border-top:1px solid rgba(255,255,255,.06);color:var(--muted);text-align:center}
+  .pill{padding:2px 8px;border-radius:16px;font-size:.78rem;color:#fff}
+  .ok{background:var(--good)} .warn{background:var(--warn)} .bad{background:var(--bad)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Retrieval-Augmented Generation (RAG) – Threat Model</h1>
+    <div class="subtitle">Enterprise Distributed Systems • SJSU • Assignment Showcase</div>
+    <div class="hero" style="margin-top:18px">
+      <img src="ThreatModelLLM.png" alt="RAG System Diagram (simplified)" onerror="this.style.display='none'">
+      <div class="card" style="flex:1;min-width:260px">
+        <h3>What this page shows</h3>
+        <ul>
+          <li>Architecture snapshot & data flows</li>
+          <li>Top risks & mitigations (STRIDE-style)</li>
+          <li>Links to the generated report & editable model</li>
+        </ul>
+        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn" href="Report.htm" target="_blank" rel="noopener">📄 Open Threat Model Report</a>
+          <a class="btn" href="New Threat Model.tm7" download>🧩 Download .tm7 Model</a>
+        </div>
+        <div style="margin-top:10px">
+          <span class="tag">HTTPS end-to-end</span>
+          <span class="tag">AuthN/AuthZ</span>
+          <span class="tag">RAG + IR + Vector DB</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Key Components & Roles</h2>
+    <div class="grid">
+      <div class="card"><h3>App / Chat UI</h3><p>User entry point; sends prompts over HTTPS to the orchestrator; streams answers back.</p></div>
+      <div class="card"><h3>API Orchestrator</h3><p>FastAPI (example). AuthN/AuthZ, rate-limits, audit logs. Calls Retriever + LLM.</p></div>
+      <div class="card"><h3>IR Retriever</h3><p>Embeddings + keyword search. Pulls relevant chunks from the knowledge index.</p></div>
+      <div class="card"><h3>Vector / Cache</h3><p>Stores embeddings and “hot” results for low-latency answers.</p></div>
+      <div class="card"><h3>LLM</h3><p>Receives <em>Prompt + Retrieved Knowledge</em>; streams grounded answers.</p></div>
+      <div class="card"><h3>Observability</h3><p>Metrics, traces, logs; security alerts for model abuse & data exfiltration.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Top Risks & Mitigations</h2>
+    <table>
+      <thead><tr><th>Risk</th><th>Why it matters</th><th>Mitigation</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Prompt Injection</td><td>Adversarial text can hijack LLM behavior.</td><td>Input/Output filtering; retrieval allow-list; hardened system prompts; audit.</td><td><span class="pill warn">Planned</span></td></tr>
+        <tr><td>Data Leakage</td><td>Sensitive chunks could be exposed.</td><td>Row-level access; redaction; no fine-tune on customer data; scrubbed logs.</td><td><span class="pill warn">Planned</span></td></tr>
+        <tr><td>Model Poisoning</td><td>Compromised corpus corrupts answers.</td><td>Signed docs; allow-listed ingestion; quarantine pipeline; dual-index canaries.</td><td><span class="pill ok">Mitigated</span></td></tr>
+        <tr><td>Insecure APIs</td><td>Unauthorized calls / replay risks.</td><td>TLS 1.3/mTLS; OAuth2/OIDC; nonce+expiry; WAF + schema validation.</td><td><span class="pill warn">Planned</span></td></tr>
+        <tr><td>Abuse / DoS</td><td>Costs spike and service degrades.</td><td>Rate limits; token budgets per tenant; circuit breakers; priority queues.</td><td><span class="pill ok">Mitigated</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Data Flows (Simplified)</h2>
+    <pre class="card mono" style="white-space:pre-wrap">
+[User/Chat] --HTTPS--> [API Orchestrator]
+       ├─ validate/authz/audit
+       ├─→ query --> [IR Retriever] --top-k--> [Vector/Index]
+       └─ combine (prompt + knowledge) --HTTPS/stream--> [LLM]
+                                   └─ result --→ Orchestrator --→ User
+    </pre>
+    <p class="subtitle">All links are TLS-encrypted; identities verified; I/O scanned for policy violations.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Submission Artifacts</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Threat Modeling Report</h3>
+        <p>Full export from Microsoft Threat Modeling Tool.</p>
+        <p><a class="btn" href="Report.htm" target="_blank" rel="noopener">Open Report</a></p>
+      </div>
+      <div class="card">
+        <h3>Source Model (.tm7)</h3>
+        <p>Open in the Threat Modeling Tool to edit or extend.</p>
+        <p><a class="btn" href="New Threat Model (1).tm7" download>Download .tm7</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">© 2025 • SJSU • RAG Threat Model Showcase</div>
+</footer>
+</body>
+</html>
